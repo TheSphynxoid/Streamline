@@ -4,13 +4,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-#if defined(__GNUC__) || defined(__clang__)
-// GCC/Clang specific
-#include <x86intrin.h>   // or <arm_neon.h> depending on architecture
-#elif defined(_MSC_VER)
-// MSVC specific
-#include <intrin.h>
-#endif
 
 namespace StreamLine{
         class ThreadPool final {

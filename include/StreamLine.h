@@ -11,6 +11,7 @@ namespace StreamLine{
     struct InstanceConfiguration{
         bool InitThreadPool = false;
         unsigned int ThreadCount = std::thread::hardware_concurrency();
+
     };
     /**
      * @brief This class sets up the StreamLine automatically instead of full manual control.
@@ -18,10 +19,11 @@ namespace StreamLine{
      */
     class Bootstrap{
     public:
-        static void Initialize(InstanceConfiguration& config = InstanceConfiguration()){
+        static void Initialize(const InstanceConfiguration& config = InstanceConfiguration()){
             if(config.InitThreadPool){
                 ThreadPool::InitalizePool(config.ThreadCount);
             }
+
         }
     };
 }
