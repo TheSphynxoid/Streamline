@@ -8,6 +8,11 @@
 #include <string>
 
 namespace StreamLine{
+
+    /** \addtogroup Exceptions
+     *  @{
+     */
+
     class ThreadOwnershipException : public std::exception {
     public:
         const char* what() const noexcept override {
@@ -21,14 +26,42 @@ namespace StreamLine{
         }
     };
 
-    class CongregatedException : public std::exception {
+    /**
+     * @brief Exception representing multiple exceptions that occurred during the execution of tasks.
+     * 
+     * This exception is thrown when a `WaitGroup` encounters multiple exceptions from its tasks.
+     * It aggregates all the exceptions into a single container, allowing the caller to inspect
+     * and handle each individual exception.
+     * 
+     * @details
+     * - The `AggregatedException` stores a vector of `std::exception_ptr` objects, each representing
+     *   an exception thrown by a task.
+     * - The `what()` method provides a summary message indicating the number of exceptions.
+     * - The `getExceptions()` method allows access to the individual exceptions for detailed handling.
+     * 
+     * Example usage:
+     * @code
+     * try {
+     *     waitGroup.Wait();
+     * } catch (const AggregatedException& ex) {
+     *     for (const auto& e : ex.getExceptions()) {
+     *         try {
+     *             if (e) std::rethrow_exception(e);
+     *         } catch (const std::exception& innerEx) {
+     *             std::cerr << "Task exception: " << innerEx.what() << std::endl;
+     *         }
+     *     }
+     * }
+     * @endcode
+     */
+    class AggregatedException : public std::exception {
     private:
         std::vector<std::exception_ptr> exceptions = std::vector<std::exception_ptr>();
         mutable std::string message_cache = "";
     public:
-        CongregatedException() noexcept = default;
+        AggregatedException() noexcept = default;
 
-        explicit CongregatedException(std::vector<std::exception_ptr> exps) noexcept
+        explicit AggregatedException(std::vector<std::exception_ptr> exps) noexcept
             : exceptions(std::move(exps))
         {
             message_cache = "Multiple exceptions occurred (count: " + 
@@ -43,15 +76,14 @@ namespace StreamLine{
             return message_cache.c_str();
         }
     };
+    /// @}
 
     //TODO: add a templated lock. template<typename Lock = std::mutex>
-    
 
     class WaitGroup {
         private:
-
             mutable std::atomic<unsigned int> count{ 0 };            // Counter for tracking the number of tasks
-			std::thread::id owner = std::this_thread::get_id(); // ID of the thread that created the WaitGroup
+            std::thread::id owner = std::this_thread::get_id(); // ID of the thread that created the WaitGroup
             mutable std::mutex mtx;                         // Mutex for coordinating condition variable
             mutable std::condition_variable cv;             // Condition variable for wait signaling
             std::atomic<bool> waiting{ false };     // Flag to prevent multiple waits
@@ -185,7 +217,7 @@ namespace StreamLine{
                 //waiting.store(false, std::memory_order_release);
 
                 if(!collected.empty()) {
-                    throw CongregatedException(std::move(collected));
+                    throw AggregatedException(std::move(collected));
                 }
             }
 
@@ -206,7 +238,7 @@ namespace StreamLine{
                 });
             
                 if(success && !collected.empty()) {
-                    throw CongregatedException(std::move(collected));
+                    throw AggregatedException(std::move(collected));
                 }
                 // You could optionally set `waiting = false` here to allow reuse in case of timeout, 
                 // but that would deviate from your current one-shot policy.
