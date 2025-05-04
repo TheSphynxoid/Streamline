@@ -5,25 +5,25 @@
 #include <mutex>
 #include <thread>
 
+
 namespace StreamLine::Locks
 {
-    /** \addtogroup Latches
+    /** \addtogroup Barriers
      *  @{
      */
 
-    /// @brief A latch that spins for a limited count before falling back to a condition variable.
-    class HybridLatch {
+    /// @brief A barrier that spins for a limited count before falling back to a condition variable.
+    class HybridBarrier {
     private:
         std::atomic<bool> ready{false};
         std::mutex mtx;
         std::condition_variable cv;
         std::atomic<unsigned int> spinCount{100}; // Default value
     public:
-        inline HybridLatch& SetSpinCount(unsigned int count) noexcept {
+        inline HybridBarrier& SetSpinCount(unsigned int count)noexcept {
             spinCount.store(count, std::memory_order_relaxed);
             return *this;
         }
-
         void Wait() noexcept {
             const unsigned int currentSpinCount = spinCount.load(std::memory_order_relaxed);
             // Spin phase
@@ -34,7 +34,7 @@ namespace StreamLine::Locks
 
             // Fallback to CV
             std::unique_lock<std::mutex> lock(mtx);
-            cv.wait(lock, [&]()noexcept { return ready.load(std::memory_order_acquire); });
+            cv.wait(lock, [&] { return ready.load(std::memory_order_acquire); });
         }
 
         inline void Signal() noexcept {
@@ -43,12 +43,20 @@ namespace StreamLine::Locks
             cv.notify_all(); // Only wakes if someone already in the cv wait
         }
 
+        inline void Reset() noexcept {
+            std::lock_guard<std::mutex> lock(mtx);
+            ready.store(false, std::memory_order_release);
+        }
+
+        /**
+         * @brief Informational only.
+         */
         inline bool PeekReady() const noexcept {
             return ready.load(std::memory_order_acquire);
         }
     };
-    /// @brief A Spin-lock latch. Useful for short wait loops.
-    class SpinLatch {
+    /// @brief A Spin-lock Barrier. Useful for short wait loops. Resettable.
+    class SpinBarrier {
     private:
         std::atomic<bool> ready{false};
     public:
@@ -62,13 +70,20 @@ namespace StreamLine::Locks
             ready.store(true, std::memory_order_release);
         }
 
+        inline void Reset() noexcept{
+            ready.store(false, std::memory_order_release);
+        }
+
+        /**
+         * @brief Informational only.
+         */
         inline bool PeekReady() const noexcept {
             return ready.load(std::memory_order_acquire);
         }            
     };
 
-    /// @brief A latch with a mutex/cv.
-    class Latch {
+    /// @brief A Barrier with a mutex/cv. Resettable.
+    class Barrier {
     private:
         std::mutex mtx;
         std::condition_variable cv;
@@ -77,7 +92,7 @@ namespace StreamLine::Locks
     public:
         void Wait() noexcept {
             std::unique_lock<std::mutex> lock(mtx);
-            cv.wait(lock, [&] { return ready.load(std::memory_order_acquire); });
+            cv.wait(lock, [&]() noexcept { return ready.load(std::memory_order_acquire); });
         }
 
         inline void Signal() noexcept {
@@ -86,10 +101,17 @@ namespace StreamLine::Locks
             cv.notify_all();
         }
 
+        inline void Reset() noexcept {
+            std::lock_guard<std::mutex> lock(mtx);
+            ready.store(false, std::memory_order_release);
+        }
+        
+        /**
+         * @brief Informational only.
+         */
         inline bool PeekReady() const noexcept {
             return ready.load(std::memory_order_acquire);
         }
     };
-
     ///@}
 } // namespace StreamLine::Locks
