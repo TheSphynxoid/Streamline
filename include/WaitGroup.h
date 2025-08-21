@@ -216,12 +216,13 @@ namespace StreamLine {
             bool success = cv.wait_for(lock, timeout, [&] {
                 return count.load(std::memory_order_acquire) == 0;
             });
-            // You could optionally set `waiting = false` here to allow reuse in case of timeout, 
-            // but that would deviate from your current one-shot policy.
 
             return success;
         }
-
+        /**
+         * @brief Resets the WaitGroup to the count of the last Add.
+         * 
+         */
         void Reset() {
             if (owner != std::this_thread::get_id()) {
                 throw WaitGroupOwnershipException();
@@ -243,6 +244,14 @@ namespace StreamLine {
          */
         inline const unsigned int GetCount()const noexcept {
             return count.load(std::memory_order_relaxed);
+        }
+        
+        /**
+         * *@brief Get the value at the last Add, This is informational only and cannot be reliably
+         * as the counter isn't concurrent read safe (it is not needed for operation)
+         */
+        inline const unsigned int GetSnapshotCount() const noexcept {
+            return snapshot_count;
         }
     };
 }
