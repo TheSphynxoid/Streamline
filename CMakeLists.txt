@@ -53,13 +53,5 @@ enable_testing()
 
 add_executable(TestInstantiator "src/test.cpp")
 target_link_libraries(TestInstantiator StreamLine)
-# CMap's concurrency test requires an optimized build: at -O0 the seqlock
-# acquire loads are unoptimized, widening the lock-free TOCTOU window enough
-# to make the contention race statistically frequent. Force optimization on
-# the test target regardless of the selected config.
-target_compile_options(TestInstantiator PRIVATE
-    $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>>:-O2>
-    $<$<CXX_COMPILER_ID:MSVC>:/O2>
-)
 add_test(NAME TestInstantiator
          COMMAND TestInstantiator)
