@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-project(StreamLine)
+project(StreamLine VERSION 0.1.0 LANGUAGES C CXX)
 
 set(HEADER
     "include/StreamLine.h"
@@ -9,7 +9,6 @@ set(HEADER
     "include/Concept.h"
     "include/Latch.h"
     "include/Barrier.h"
-    "include/Pipeline.h"
     "include/CMap.h"
     "include/SpinLock.h"
     "include/SimdPort.h"
